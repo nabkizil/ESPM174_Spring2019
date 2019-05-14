@@ -1,0 +1,227 @@
+---
+title: "problem_set_6"
+author: 3032247297
+output:
+  html_document:
+    df_print: paged
+---
+
+collaborated with 25761049
+
+```{r}
+library(nlme)
+```
+
+```{r}
+set.seed(999)
+gA <- as.factor(rep(c("A1","A1","A2","A2"), 5))
+gB <- as.factor(rep(c("B1","B2","B1","B2"), 5))
+group.means <- rep(c(0,2,6,8), 5)
+y <- group.means + rnorm(20, 0, 2)
+ourData <- data.frame(y = y, gA = gA, gB = gB)
+ourData
+```
+
+Question A)
+Look at the data frame ourData and the above commands. What are the true means for each combination of the A and B factors? What are the true values of ??, ??1, ??2, ??1, ??2, and all (????)ij parameters using sum-to-zero contrasts? Are there any true interactions (i.e. are interactions non-zero)?
+
+The true means for the combination of the A and B factors are 0, 2, 6, and 8.
+
+u = (2+6+8)/4 = 4
+a1 = 1-4 = -3
+a2 = 7-4 = 3
+b1 = 3 - 4 = -1
+b2 = 5-4 = 1
+abij = 0
+
+there aren't any true interactions.
+
+```{r}
+fit.with.interaction <- lm(y ~ gA * gB, data = ourData)
+anova(fit.with.interaction)
+```
+
+
+QUESTION B)
+What are the P-values for the interaction, the main effects of A levels, and the main effects of B levels? For each of these three hypothesis tests, is the conculsion you would reach (using Type I error rate = 0.05) correct, a Type I error (wrong rejection of a null that is really true), or a Type II error (wrong non-rejection of a null that is really false)?
+
+The p value for the interaction is .34, therefore this is not statistically significant.
+For the A level, the p value is .000002, this value is extremely statistically significant.
+For the B level, the p value is .74, this value is also not statistically significant. And this is a type 2 error because we do not reject the null.
+
+Yes the conclusion that there are not any interaction effects is true because when we look at the resulting table, the p value of the interaction effect is greater than our alpha value of 0.05, therefore the interaction effect is not statistically significant.
+
+
+QUESTION C: For gA and gB, which quantities are the same as above (in the model with interactions) and which are different? For any that are different, explain why they would be different.
+
+The sum sq, mean sq, and f values are the  approximately the same for both the interaction and no interaction when it comes to the A level. 
+
+The residuals are different because there might be some subtle interaction and there could also be some differences without interaction because there is a change in the variance of the data resulting in a change within the residuals.
+
+QUESTION D: For each of the first four rows of the model matrix, calculate the output of the matrix multiplication. Show that these four outputs are the same as the means for the four AiBj combinations. You can calculate those means directly from entries of ourData$y. (Any other way you calculate those means is also acceptable.)
+
+```{r}
+fit.with.interaction2 <- lm(y ~ gA * gB, data = ourData, 
+                            contrasts = list(gA = contr.sum, gB = contr.sum))
+anova(fit.with.interaction2)
+m <- model.matrix(fit.with.interaction2)
+beta <- coefficients(fit.with.interaction2)
+y <- (m * beta) + rnorm(4, 0, 2)
+y
+
+fit.with.interaction.version2 <- lm(y ~ gA + gB + gA:gB)
+anova(fit.with.interaction.version2) ## This output should be identical to that from fit.with.interaction.
+```
+
+
+```{r}
+summary(ourData)
+```
+
+
+Question E: Do the same exercise you did for previous question: For the first four rows of the model matrix for fit.with.interaction2, calculate the result of the matrix multiplication of XB. This time, you need to use the new B. Show that the answers are the same as above. 
+
+```{r}
+fit.with.interaction2 <- lm(y ~ gA * gB, data = ourData, 
+                            contrasts = list(gA = contr.sum, gB = contr.sum))
+anova(fit.with.interaction2)
+m <- model.matrix(fit.with.interaction2)
+beta <- coefficients(fit.with.interaction2)
+y <- (m * beta) + rnorm(4, 0, 2)
+y
+```
+
+
+Question F: For both fit.with.interaction and fit.with.interaction2, there is one column of the model matrix that corresponds to the interaction. In each case, how can the entries in this column be calculated from the entries in the tow columns to its left? 
+
+The entries in this column can be calculated by multiplying the intercept with the A and B levels.
+
+Question G: Explain why the predicted values are just four values repeated in order. What values are these? 
+
+The predicted values are the combinations for the A and B levels (a1b1, a1b2... etc)
+
+Question H: In this case, again using sum-to-zero contrasts, what are the true means for each combination of the A and B factors? What are the true values of u, a1, a2, B1, B2 and (AB)ij parameters using sum-to-zero contrasts? Are there any true interactions? 
+
+u = 8/4 = 2
+A1, A2, B1, B2 = 0
+ABij = a1b1 - u - ai - bj = -2
+
+Question I: Using one of the commands above, run two-way ANOVA including interactions. What are the P-values for the interaction and the main effects of A and B? For each hypothesis test, is the conclusion you would reach correct, a Type I error, or a Type II error? 
+
+
+```{r}
+set.seed(7)
+group.means <- rep(c(0,4,4,0), 5)
+y <- group.means + rnorm(20, 0, 2)
+gA <- as.factor(rep(c("A1","A1","A2","A2"), 5))
+gB <- as.factor(rep(c("B1","B2","B1","B2"), 5))
+ourData <- data.frame(y = y, gA = gA, gB = gB);
+ourData
+
+anova(fit.with.interaction)
+
+```
+
+When we fit with the interaction, we get a statistically insignificant number for all of the levels including the interaction.This is a type 2 error because we fail to reject the null but there might actually be statistical significance.
+
+
+```{r}
+simD <- read.csv(file = "simulated_data.csv")
+simD$BLOCK <- as.factor(simD$BLOCK) ## Ensure that BLOCK is used as a factor
+simD  ##Look at the data
+
+fixed1 <- lm(Y ~ TREATMENT * BLOCK, data = simD)
+anova(fixed1)
+
+mixed1 <- aov(Y ~ TREATMENT + Error(BLOCK/TREATMENT), data = simD)
+mixed1
+
+summary(mixed1)
+
+```
+
+
+QUESTION J: Describe where the four Sums of Squares from the anova using the  lm output appear in the aov output.
+
+They appear in the anova table as the treatment, block, and relationship between the treatment and block variables.
+
+QUESTION K: Show how the hypothesis test for TREATMENT from aov matches what you would get if you do it by hand from the lm output.
+
+19.700 / 12.009 = 1.514
+
+```{r}
+1 - pf(5.16,1, 9)
+```
+
+
+```{r}
+library(nlme)
+mixed2 <- lme(Y ~ TREATMENT, random = ~ 1 | BLOCK/TREATMENT, data = simD)
+mixed2
+
+anova(mixed2)
+
+```
+
+
+
+QUESTION L: Show how the estimated variance of residuals from lme matches the Residuals Mean Squares from lm.
+
+```{r}
+anova(fixed1)
+mixed1
+
+#1.587**2 = 2.52
+```
+
+Here we can see that the Residual value in the anova table is the same as the sum of sq residuals in the mixed1 table.
+
+QUESTION M: Show how the estimated standard deviations of residuals, BLOCK, and BLOCK-by-TREATMENT interactions lead to the BLOCK Mean Squares from  lm. Note that you will only be able to make the numbers match to about two decimal places. That's because the R output you see shows you rounded numbers. (A previous version of this question had a typo asking you to show how these values lead to the TREATMENT:BLOCK Mean Squares from lm. We will accept that as an aswer too.)
+
+The estimated standard dev of residuals, block, and block:treatment relate to the the block mean squares value by being a combination of these values. IN this case the est std of residuals is 2.519. The block is 2.27 ^2.
+
+```{r}
+#p is 2 because 
+#n is 4 
+#sigma is 1.5873485
+sigma_squared <- 1.5873485 ^2
+sigma_squared
+# 2.519675
+
+Block_by_treatment <- 2.519675 + (4 * (1.619376^2)) + (4 * 2 * 5.146414)
+Block_by_treatment
+#
+
+```
+
+# Block Means Squares 
+
+```{r}
+2.268571^2
+```
+
+
+QUESTION N: Verify the F and P-value for TREATMENT:BLOCK effects by direct calculation from the Mean Squares and degrees of freedom.
+
+In order to calculate the F value first you need to calculate the sum of sq value between and within groups. Find the degrees of freedom between, and subtract 1 from the total number of sets. Divide the sum of sq between by the df between. Divide the mean sqare between by the mean sq within and the ratio between the 2 is equal to the F value.
+
+
+P-value: 1 - pf(5.1631, 9, 60) = 3.52e-05. This equals p-value in table
+
+F-value: Treatment:Block MS / Residuals MS = 5.1631. This equals f-value in table. 
+
+QUESTION O: Verify that the F value and P value for the BLOCK test from this are the same as you would get by constructing the test from the sums of squares for simD above.
+
+
+```{r}
+mixed2
+anova(mixed2)
+```
+
+Yes the F and the P value for the block test are the same as you would get by constructing the test from the sum of squares for the simD.
+
+F = 13.5451 / 3.2523 = 4.164776 
+
+P-value = 1-pf(4.1648, 9, 9) = .02251451 
+
+

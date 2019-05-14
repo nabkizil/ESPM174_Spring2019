@@ -1,0 +1,168 @@
+---
+title: "problem_set_8"
+author: "3032247297"
+output:
+  html_document:
+    df_print: paged
+---
+
+I did not collaborate with anyone on this assignment. Aside from asking for some help from the TA during lab section.
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r}
+## This function is a slightly modified version of the function in the model selection lecture notes.
+simulate.data <- function(n = 20, 
+                          real.slopes, 
+                          num.null.slopes, 
+                          sigma.res = 1) {
+  ## Simulate X values for the real slopes.
+  real.Xs <- as.data.frame(matrix(runif(n*length(real.slopes)), 
+                                  nrow = n))
+  ## The names will be X1, X2, etc.
+  names(real.Xs) <- paste('X', 1:length(real.slopes), sep = '')
+  
+  ## Y is generated using matrix algebra for "X beta + epsilon""
+  Y <- data.frame(Y = as.matrix(real.Xs) %*% real.slopes + rnorm(n, 0, sigma.res) )
+  
+  ## Simulate X values for the zero (null) slopes.
+  null.Xs <- as.data.frame(matrix(runif(n * num.null.slopes), 
+                                  nrow = n))
+  ## The names will continue the pattern of "Xi"...
+  names(null.Xs) <- paste('X', length(real.slopes) + (1:num.null.slopes), sep='')
+  ## column-bind the response values, real Xs and null Xs into one data frame and return it
+  cbind(Y, real.Xs, null.Xs)
+}
+```
+
+
+Question A
+
+```{r}
+set.seed(123)
+data1 <- simulate.data(n = 10, 
+                       real.slopes = c(1, .7, .4),
+                       num.null.slopes = 5)
+data1
+
+```
+
+
+Question B
+```{r}
+#simulating data
+
+set.seed(123)
+data1 <- simulate.data(n = 50, 
+                       real.slopes = c(1, .7, .4),
+                       num.null.slopes = 7)
+```
+
+
+```{r}
+fit1 <- lm(Y ~ ., data = data1) # step 1
+summary(fit1)
+
+logl <- logLik(fit1) #step 2
+logl
+
+sse <- sqrt(sum((residuals(fit1)^2)/50)) #step 3
+sse
+
+predic <- fitted(fit1) #obtain pred value
+predic
+
+s4<- dnorm(x= data1[1,1], mean = predic[1], sd = sse, log = TRUE ) #step 4
+s4
+
+s5<- -log(sqrt(2*pi))-log(sse)-(.5*((data1[1,1]-predic[1])/sse)**2) #step 5
+s5
+
+s6<- sum(dnorm(x= data1[,1], mean = predic, sd = sse, log = TRUE)) #step 6
+s6
+
+AICfit <- AIC(fit1)  #step 7
+AICfit
+
+AICFORM<- -2* logl +2*12 #Step 8 
+AICFORM
+
+```
+
+Question C
+```{r}
+## Assume we have the same `fit1` object created above.
+## Simulate a new data set with just one row of data.
+set.seed(456)
+new.data <- simulate.data(n = 1, 
+                          real.slopes = c(1, .7, .4),
+                          num.null.slopes = 10)
+new.data
+
+## Obtain the predicted y-hat for the new data.
+predict(fit1, new.data)
+
+## Show the prediction error: the residual of the prediction:
+new.data$Y - predict(fit1, new.data)
+
+## Show step-wise AIC selection in action. The output
+## shows the sequence of model steps.
+AICfit1 <- step(fit1)
+
+summary(AICfit1) ## AICfit1 is a fitted model object.
+
+```
+
+Question D
+```{r}
+errorA <- 0
+errorB<- 0
+errorC<- 0
+errorD<- 0
+errorE<- 0
+errorF<- 0
+errorG<- 0
+
+for (i in 1:500) {
+  new.data <- simulate.data(n =1, 
+                            real.slopes = c(1.0, .7, .1),
+                            num.null.slopes = 20)
+  data2 <- simulate.data(50, c(1.0, .7, .1), 20)
+  
+  A <- lm(Y~ X1+X2, data = data2)
+  errorA[i] <-(new.data$Y - predict(A, new.data))^2
+  
+  B <- lm(Y~ X1+X3, data = data2)
+  errorB[i] <-(new.data$Y - predict(B, new.data))^2
+  
+  C <- lm(Y~ X1+X2+X3, data = data2)
+  errorC[i] <-(new.data$Y - predict(C, new.data))^2
+  
+  D <- lm(Y~ X1+X2+X3+X4+X5+X6+X7+X8+X9, data = data2)
+  errorD[i] <-( new.data$Y - predict(D, new.data))^2
+  
+  E <- lm(Y~ X1+X2+X3+X4+X5+X6+X7+X8+X9+X10+X11+X12+X13, data = data2)
+  errorE[i] <- (new.data$Y - predict(E, new.data))^2
+  
+  F <- lm(Y~ X1+X2+X3+X4+X5+X6+X7+X8+X9+X10+X11+X12+X13+X14+X15+X16+X17+X18+X19+X20+X21+X22+X23, data = data2)
+  errorF[i] <-(new.data$Y - predict(F, new.data))^2
+  
+  G<-lm(Y~ X1+X2, data = data2)
+  fitG<- step(G,trace = 0)
+  errorG[i] <-(new.data$Y - predict(fitG, new.data))^2
+  
+}
+```
+
+Question E
+
+1) No because we could be including variables that could have a strong relationship with one another, therefore double counting them. A good example of this is a model that looks at house prices by taking into account sq ft and number of bedrooms, since there is a very high correlation between sq ft and number of bedrooms if you include both variables into your model you will get weird coeefficients for them because they are basically recording similar information.
+
+2) No I would say that it is not always worse, but if you include a whole bunch of coefficients that really are zero I think it might slow down and confuse the model when you are trying to calculate the predicted value. In addition if you have a whole bunch of variables then you could run the risk of overfitting so if they are zero I think it might be better in some cases to exclude them.
+
+3) Even though I encountered a higher error rate for my AIC than with the other models, I think that the AIC can handle unknown parameters much better than other models, so I think it is better utilized in less theoretical and more real world situations.

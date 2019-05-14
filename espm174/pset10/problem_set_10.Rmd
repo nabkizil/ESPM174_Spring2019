@@ -1,0 +1,201 @@
+---
+title: "problem set 10"
+author: "3032247297"
+output:
+  html_document:
+    df_print: paged
+---
+
+I collaborated with nobody on this assignment.
+
+Question A
+
+
+```{r}
+RK <- read.table("RoadKills.txt", header = TRUE)
+summary(RK)
+with(RK, plot(D.PARK, TOT.N, pch = 19, main = "Road Kill Data from Zuur et al. (2009)"))
+```
+
+
+Question B
+
+
+```{r}
+fit1 <- glm(TOT.N ~ D.PARK, family = poisson, data = RK)
+summary(fit1)
+logLik(fit1)
+AIC(fit1)
+deviance(fit1)
+{
+  with(RK, plot(D.PARK, TOT.N, pch = 19, main = "Road Kill Data from Zuur et al. (2009)"))
+  with(RK, points(D.PARK, fitted(fit1), pch = 'x', col = 'red')) 
+}
+
+plot(RK$D.PARK, resid(fit1))
+
+```
+
+Question C
+
+I think the first violation is that the errors are not independent, and the second is that the data does not seem to have constant variance. As X increases, the data gets clustered closer and closer together which indicates a decrease in variance and std deviation.It also does not look like there is a linear relationship between the response and the linear predictor, it seems almost sinusoidal, this is another violation of the GLM assumption.
+
+Question D
+
+```{r}
+RK$D.PARK[15]
+RK$TOT.N[15]
+
+RK
+```
+
+1) 15(7187.762) + 33 = 107,849
+2) 4.316 - 15(.000106) = 4.314
+3)
+```{r}
+summary(RK[15])
+
+u <- 1.5617
+
+exp(-u)*(u^4.314)/factorial(4.314)
+```
+The answer is .0369
+
+Question E
+
+```{r}
+logLikelihood <- function(intercept, slope) {
+  sum(dpois(RK$TOT.N, exp(intercept + slope*RK$D.PARK), log = TRUE))
+}
+logLikelihood(4.316e+00, -1.059e-04)
+
+slope.grid <- -0.000106 + seq(-9e-6, 9e-6, length = 21)
+cbind(slope.grid) ## cbind shows the values vertically, which is easier to read.
+intercept.grid <- 4.32 + seq(-9e-2, 9e-2, length = 21)
+cbind(intercept.grid)
+z <- matrix(0, nrow = length(intercept.grid), ncol = length(slope.grid))
+for(i in 1:length(intercept.grid))
+  for(j in 1:length(slope.grid))
+    z[i, j] <- logLikelihood(intercept.grid[i], slope.grid[j])
+z
+{
+  contour(intercept.grid, slope.grid, z, 
+          levels = max(z) - (1:10), main = "log likelihood contours")
+  points(4.32, -0.000106, pch = 'x', col = 'red')
+}
+```
+
+The log likelihood surface looks like tree rings comprised of ellipses.
+
+```{r}
+fit2 <- glm(TOT.N ~ D.PARK, family = quasipoisson, data = RK)
+summary(fit2)
+```
+
+Question F
+
+The reported dispersion parameter is 7.630
+
+Question G
+
+The parameter estimates are nearly the same while the standard error is bigger and the resulting confidence intervals are also larger. The p value for Dpark is also less significant in fit2 than in fit1 but still very significant.
+
+```{r}
+logLik(fit2)
+AIC(fit2)
+deviance(fit2)
+```
+
+Question H
+
+The deviance is the same in fit2 as fit1.
+
+```{r}
+RK$SQ.POLIC<-sqrt(RK$POLIC)
+RK$SQ.WATRES<-sqrt(RK$WAT.RES)
+RK$SQ.URBAN<-sqrt(RK$URBAN)
+RK$SQ.OLIVE<-sqrt(RK$OLIVE)
+RK$SQ.LPROAD<-sqrt(RK$L.P.ROAD)
+RK$SQ.SHRUB<-sqrt(RK$SHRUB)
+RK$SQ.DWATCOUR<-sqrt(RK$D.WAT.COUR)
+fit3<-glm(TOT.N ~ 
+            OPEN.L + 
+            MONT.S + 
+            SQ.POLIC +
+            SQ.SHRUB + 
+            SQ.WATRES + 
+            L.WAT.C + 
+            SQ.LPROAD + 
+            SQ.DWATCOUR + 
+            D.PARK, 
+          family=poisson, 
+          data=RK)
+summary(fit3)
+```
+
+Question I
+
+The following variables have significant marginal z tests using a type 1 error rate of 0.01: Mont. S, SQ Polic, Sq Shrub, Sq Watres, L Wat C, SQ Lproad, D Park
+
+```{r}
+fit4<-glm(TOT.N ~ 
+            OPEN.L + 
+            MONT.S + 
+            SQ.POLIC +
+            SQ.SHRUB + 
+            SQ.WATRES + 
+            L.WAT.C + 
+            SQ.LPROAD + 
+            SQ.DWATCOUR + 
+            D.PARK, 
+          family=quasipoisson, 
+          data=RK)
+summary(fit4)
+```
+
+Question J
+
+The dispersion parameter is 5.928, the parameter estimates are nearly the same for fit3 as fit4. The standard errors for fit 4 are larger than the standard errors for fit3.
+
+Question K
+
+```{r}
+anova(fit1, fit3, test = "Chi")
+
+```
+
+Question L
+
+```{r}
+anova(fit2, fit4, test = "F")
+
+```
+
+
+The p value for the likelihood of ratio test is smaller than the quasilikelihood model test. In this instance I would report a p value that is too large.
+
+```{r}
+library(mgcv)
+fit5 <- gam(TOT.N ~ s(D.PARK, k = 30), family = poisson, data = RK)
+summary(fit5)
+{
+  with(RK, plot(D.PARK, TOT.N, pch = 19, main = "Road Kill Data from Zuur et al. (2009)"))
+  with(RK, points(D.PARK, fitted(fit5), pch = 'x', col = 'red', type = "b")) 
+}
+```
+
+
+```{r}
+library(mgcv)
+fit6 <- gam(TOT.N ~ s(D.PARK, k = 30), family = quasipoisson, data = RK)
+summary(fit6)
+{
+  with(RK, plot(D.PARK, TOT.N, pch = 19, main = "Road Kill Data from Zuur et al. (2009)"))
+  with(RK, points(D.PARK, fitted(fit6), pch = 'x', col = 'red', type = "b")) 
+}
+```
+
+
+Question M
+
+The GAM suggests that the data does not follow a logarithmic model until around D.Park = 10000, in addition it showcases that there is much more variance before that point than after that point indicating that a trend or a model is only viable as a predictive model when D Park > 10000 if we are using a linear model. 

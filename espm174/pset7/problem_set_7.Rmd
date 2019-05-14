@@ -1,0 +1,146 @@
+---
+title: "problem_set_7"
+author: '3032247297'
+date: "April 9, 2019"
+output: html_document
+---
+
+I collaborated with 25998899, we discussed part A and the proper coding techniques to use for that part.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+```
+
+
+#Question A
+
+```{r}
+simulate_ancova <- function(mu, alphas, beta, q, sigma_residual) {
+  
+  if (sum(alphas) != 0)
+    stop ("alphas do not sum to 0")
+  
+  p <- length(alphas)
+  Y <- numeric(p*q)
+  group <- numeric(p*q)
+  X <- numeric(p*q)
+  row <- 1
+  
+  for (i in 1:p) {
+    
+    for(j in 1:q) {
+      
+      group[row] <- i
+      X[row] <- rnorm(1, 10, 5)
+      
+      Y[row] <- mu + alphas[i] + beta * (X[row] - 10) + rnorm(1, 0, sigma_residual)
+      
+      row <- row + 1
+    }
+  }
+  
+  group <- factor(group)
+  data.frame(Y, X, group)
+  
+}
+
+data <- simulate_ancova(0, c(-1.5,1.5), 0.1, 20, 0.1)
+data
+
+plot(data$X, data$Y, pch = as.numeric(data$group), col = as.numeric(data$group),
+     xlab = "X", ylab = "Y", main = "Simulated Data")
+```
+
+
+#Question B
+```{r}
+
+simulate_many <- function(n_simulations, mu, alphas, beta, q, sigma_residual) {
+  
+  values <- list()
+  
+  for(i in 1:n_simulations) {
+    
+    z <- simulate_ancova(mu = mu,alphas = alphas,beta = beta,q = q,sigma_residual = sigma_residual)
+    
+    values[[i]] <- z
+  }
+ 
+   values
+}
+
+```
+
+
+#Question C
+
+```{r}
+n_sim <- 1000
+alphas <- list(c(0,0), c(-0.15, 0.15), c(-0.3,0.3), c(-0.45,0.45))
+betas <- c(0, 0.2, 0.4, 0.6)
+q <- 30
+sigma_residual <- 0.8
+mu <- 0
+mean_diff <- c(0,1,2,3)
+prob_reject_null_with_cov <- numeric()
+prob_reject_null_without_cov <- numeric()
+mean_diff <- numeric()
+beta <- numeric()
+simulations <- vector()
+row <- 1
+
+for (i in alphas) {
+  
+  for (j in betas) {
+    
+    simulations <- simulate_many(n_sim, mu, i, j, q, sigma_residual)
+    p_vals_wcov <- numeric()
+    p_vals_wocov <- numeric()
+   
+     for (k in 1:n_sim) {
+     
+        p_vals_wcov[k] <- anova(lm(Y ~ X + group, data = simulations[[k]]))['group', 'Pr(>F)']
+        
+      p_vals_wocov[k] <- anova(lm(Y ~ group, data = simulations[[k]]))['group', 'Pr(>F)']
+   
+       }
+   
+     prob_reject_null_with_cov[row] <- sum(p_vals_wcov < 0.05) / n_sim
+    prob_reject_null_without_cov[row] <- sum(p_vals_wocov < 0.05) / n_sim
+    
+    mean_diff[row] <- i[2] * 2
+    beta[row] <- j
+    row <- row + 1
+    
+  }
+}
+results <- data.frame(mean_diff, beta, prob_reject_null_with_cov, prob_reject_null_without_cov)
+
+results
+
+results$beta <- as.factor(results$beta)
+
+ggplot(data = results) + aes(x = mean_diff, y = prob_reject_null_with_cov, col = beta) +
+  geom_point() +
+  geom_line(aes(group = beta))
+
+ggplot(data = results) + aes(x = mean_diff, y = prob_reject_null_without_cov, col = beta) +
+  geom_point() +
+  geom_line(aes(group = beta))
+
+
+```
+
+#QUestion D
+
+1) If we remove the covariate from our analysis then we would expect the statistical power to decrease as the true covariate slope increases.
+
+2) If we include the covariate in our analysis we would observe the same statistical power as the true covariate slope increases.
+
+3) A type 1 error rate is the probability of falsely rejecting a true null hypothesis. In our graphs we look at the mean_diff rate, if it is far away from 0.05 which is our alpha then the type 1 error rate would be incorrect.
+
+4) If the true covariate slope = 0 then the statistical powers for both including and excluding the covariate analysis would be exactly the same.

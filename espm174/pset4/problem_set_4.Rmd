@@ -1,0 +1,199 @@
+---
+title: "Problem Set 4"
+author: 3032247297
+date: "2/10/2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+### collaborated with 26642157
+
+```{r}
+library(nlme)
+```
+
+
+#Nested ANOVA data simulation:
+
+Question A)
+
+```{r}
+simulate_nested <- function(group_means, sigma_beta, sigma_epsilon, q, n){
+  
+  p <- length(group_means)
+  
+  y <- 0
+  group <- 0
+  replicate.unique <- 0
+  
+  row <- 1 # Prepare for step 5
+  # Step 3:
+  for(i in 1:p) {
+    # Step 4:
+    for(j in 1:q) {
+      # Step 6:
+      replicate_effect <- rnorm(1, 0, sigma_beta)
+      ## Increment for step 5:
+
+        for (k in 1:n){
+          group[row] <- i
+          replicate.unique[row] <- j
+          if (i ==1){
+            replicate.unique[row] <- j
+          }
+          else {
+            replicate.unique[row] <- j + ((i-1)*q)
+          }
+          y[row] <- group_means[i] + replicate_effect + rnorm(1, 0, sigma_epsilon)
+          
+          row <- row + 1 #iterates through row
+        }
+    }
+  
+  }
+  group <- factor(group)
+  replicate.unique <- factor(replicate.unique)
+  
+  completed <- data.frame(y, group, replicate.unique)
+  completed
+}
+```
+
+
+```{r}
+set.seed(14)
+# These inputs are chosen to make it easy to notice if 
+# the output of this function is obviously wrong.
+sim <- simulate_nested(group_means = c(100, 200, 300),
+                       sigma_beta = 30,
+                       sigma_epsilon = 0.5,
+                       q = 3,
+                       n = 2
+)
+sim
+```
+
+
+```{r}
+fit <- lme(y ~ group, random = ~ 1 | replicate.unique, data = sim)
+# We can look at ANOVA results like this:
+anova(fit)
+```
+
+
+Question B)
+```{r}
+simulate_many_nested_p <- function(n_simulations,group_means, sigma_beta, sigma_epsilon, q, n ){
+  
+p_values <- 0
+row <- 1
+
+for (i in 1:n_simulations){
+  sim <- simulate_nested(group_means, sigma_beta, sigma_epsilon, q, n)
+  
+  fit <- lme(y ~ group, random = ~ 1 | replicate.unique, data = sim)
+  
+  p_values[row] <- anova(fit)['group' ,'p-value'] 
+  row <- row + 1
+}
+
+p_values
+  
+}
+```
+
+
+```{r}
+p_sim <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(5, 10),
+                                sigma_beta = 10,
+                                sigma_epsilon = 20,
+                                q = 10,
+                                n = 3)
+hist(p_sim)
+```
+
+
+
+
+Question C)
+I think that there is far more variability in the p values that you experience when you increase the number of sub samples and have a low amount of replicates. On the contrary when you flip the two the number of p values that you experience that are statistically significant are much lower and congregate near the bottom of the plot.
+```{r}
+a <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(10, 20),
+                                sigma_beta = 20,
+                                sigma_epsilon = 10,
+                                q = 2,
+                                n = 25)
+
+b <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(10, 20),
+                                sigma_beta = 20,
+                                sigma_epsilon = 10,
+                                q = 5,
+                                n = 10)
+
+c <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(10, 20),
+                                sigma_beta = 20,
+                                sigma_epsilon = 10,
+                                q = 10,
+                                n = 5)
+
+d <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(10, 20),
+                                sigma_beta = 20,
+                                sigma_epsilon = 10,
+                                q = 25,
+                                n = 2)
+
+e <- simulate_many_nested_p(n_simulations = 500,
+                                group_means = c(10, 20),
+                                sigma_beta = 20,
+                                sigma_epsilon = 10,
+                                q = 50,
+                                n = 1)
+```
+
+```{r}
+plot(a)
+plot(b)
+plot(c)
+plot(d)
+plot(e)
+```
+Increasing replication increases statistical power.
+
+uestion D)
+```{r}
+a <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 2)
+a1 <- sum(a < 0.05) / 500
+
+b <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 5)
+b2 <- sum(b < 0.05) / 500
+
+c <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 10)
+c3 <- sum(c < 0.05) / 500
+
+d <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 20)
+d4 <- sum(d < 0.05) / 500
+
+e <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 35)
+e5 <- sum(e < 0.05) / 500
+
+f <- simulate_many_nested_p(500, c(10,20), sigma_beta = 20, sigma_epsilon = 50, q = 25, n = 50)
+f6 <- sum(f < 0.05) / 500
+
+
+sub_samples <- c(2, 5, 10, 20, 35, 50)
+statistical_power <- c(a1, b2, c3, d4, e5, f6)
+plot(sub_samples, statistical_power, main = "number of sub-samples per replicate and statistical power")
+```
+
+
+Question E)
+statistical power increases as you increase the number of subsamples per replicate.
+
+Question F)
+I am not sure how to do this

@@ -1,0 +1,159 @@
+---
+title: "Problem set 5"
+author: "null"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(nlme)
+library(ggplot2)
+```
+
+
+Question A)
+```{r}
+simulate_RCB <- function(mu, alphas, sigma_beta, q, sigma_residual){
+  
+  if(sum(alphas) != 0)
+    stop("alphas must sum to 0.")
+  
+  y <- 0
+  A <- 0
+  B <- 0
+  
+  row <- 1
+  
+  bj <- rnorm(q, 0, sd = sigma_beta)
+  p <- length(alphas)
+  
+  for (i in 1:p){
+    for(j in 1:q){
+      y[row] <- mu + alphas[i] + bj[j] + rnorm(1, 0 , sd = sigma_residual)
+      A[row] <- i 
+      B[row] <- j
+      
+      row <- row + 1
+      
+    }
+  }
+  A<- as.factor(A)
+  B <- as.factor(B)
+  
+  df <- data.frame(y, A, B)
+df
+}
+```
+
+
+
+```{r}
+alphas <- c(-10, 7, 3)
+set.seed(531)
+sim <- simulate_RCB(mu = 100,
+                    alphas = alphas,
+                    sigma_beta = 5,
+                    q = 3,
+                    sigma_residual = 1)
+sim
+```
+
+
+```{r}
+if(!require(ggplot2))
+  stop("You need to do install.packages('ggplot2')")
+ggplot(data = sim) +
+  aes(x = A, y = y, color = B) +
+  geom_point() + 
+  geom_line(aes(group = B))
+
+```
+
+
+```{r}
+simulate_RCB_many <- function(n_simulations,
+                              mu,
+                              alphas,
+                              sigma_beta,
+                              q,
+                              sigma_residual) {
+  
+  result <- list()
+  for(i in 1:n_simulations) {
+    d <- simulate_RCB(mu = mu,
+                      alphas = alphas,
+                      sigma_beta = sigma_beta,
+                      q = q,
+                      sigma_residual = sigma_residual)
+    result[[i]] <- d
+  }
+  result
+}
+```
+
+
+Question B)
+```{r}
+sig_beta <- c(0, 2, 4, 6)
+treat_diff <- c(0, 1, 2, 3)
+num_sim <- 500
+alphas <- matrix(data = c(0, 0.5, 1, 1.5, 0, -0.5, -1, -1.5), ncol = 2 )
+q <- 20
+mu <- 100
+sigma_res <- 2
+row <-1
+blocks <- 0
+no_blocks <- 0
+p_rejec_block <- 0
+p_reject_no_block <- 0
+sigma_beta <- 0
+mean_diff <- 0
+
+for (j in 1:length(sig_beta)){
+  
+  for (i in 1:length(alphas[,1])){
+    
+    simulations <- simulate_RCB_many(num_sim, mu, alphas[i,], sig_beta[j], q, sigma_res)
+    for(k in 1:num_sim){
+      blocks[k] <- anova(lme(y~A, random =  ~1 | B, data = simulations[[k]]))["A", "p-value"]
+      no_blocks[k] <- anova(lm(y~A, data =  simulations[[k]]))['A', 
+                                                               'Pr(>F)']
+    }
+    mean_diff[row] <- treat_diff[i]
+    p_rejec_block[row] <- sum(blocks<0.05)/num_sim
+    sigma_beta[row] <- sig_beta[j]
+    p_reject_no_block[row] <- sum(no_blocks<0.05)/num_sim
+    
+    row <- row+1
+    
+    
+  }
+  
+   results <- data.frame(p_rejec_block, p_reject_no_block,sigma_beta = factor(sigma_beta) , mean_diff)
+  results
+}
+```
+
+```{r}
+results 
+
+ggplot(data = results) +
+  aes(x = mean_diff, y = p_rejec_block, col = sigma_beta) +
+  geom_point() +
+  geom_line(aes(group = sigma_beta))
+
+ggplot(data = results) +
+  aes(x = mean_diff, y = p_reject_no_block, col = sigma_beta) +
+  geom_point() + 
+  geom_line(aes(group = sigma_beta))
+```
+
+Question C)
+If you include block effects in the data, the variation due to sigma_beta when it comes to the probability of rejecting decreases slightly. So as a result the power also increases. However since there is far less differences between groups it could be difficult to understand when there is a true difference resulting in type 1 error.
+
+Question D)
+When you ommit the block effects the statistical power decreases greatly with the increase of sigma_beta, as a result of this the probability of rejecting decreases, however there is much more variation between groups so I think that the probability of a type 1 error decreases because you can clearly see the differences in experimental groups
+
+Question E)
+If block effects are not occurring and you include them in the data, then I think that statistical power also decreases slightly because then you are conducting this experiment on several groups where you assume there is some sort of nuisance factor when there really is none. So you think that there is some sort of confounding variable impacting the results that you are looking for but it actually does not exist. In this case I do not think that this has an effect on the type 1 error but this could create problems coming up with large enough sample sizes for the experiment if you have a whole bunch of blocks.

@@ -1,0 +1,116 @@
+---
+title: "problem_set_9"
+author: "3032247297"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+I received a bit of help from 3032676925 with question F and how to set up the problem. That was all the collaboration/help I received aside from going to lab and conversing with my peers.
+
+
+Question A
+```{r}
+ISIT <- read.table("ISIT.txt", header = TRUE)
+Sources16<-ISIT$Sources[ISIT$Station==16]
+Depth16<-ISIT$SampleDepth[ISIT$Station==16]
+plot(Depth16,Sources16,type="p")
+## For the cvTools functions later, we will want a data frame like this:
+d <- data.frame(Depth16 = Depth16, Sources16 = Sources16)
+d
+```
+
+
+Question B
+The data comes from cruise 16 and is a scatterplot of pelagic bioluminescence vs depth gradient.
+
+Question C
+```{r}
+loess_fit_1 <- loess(Sources16 ~ Depth16)
+loess_fit_2 <- loess(Sources16 ~ Depth16, span = 0.5)
+loess_fit_3 <- loess(Sources16 ~ Depth16, span = 0.2)
+loess_fit_4 <- loess(Sources16 ~ Depth16, span = 0.1)
+{
+  plot(Depth16, Sources16, pch = 19, col = "red")
+  ## Note that to plot lines for the fitted models, we want to set up a grid of values.
+  ## Otherwise we will only see values where there are data.
+  Depth16_grid <- seq(min(Depth16), max(Depth16), length = 100)
+  d_predict <- data.frame(Depth16 = Depth16_grid)  
+  points(Depth16_grid, predict(loess_fit_1, d_predict), type = "l", lty = 'solid')
+  points(Depth16_grid, predict(loess_fit_2, d_predict), type = "l", lty = 'dashed')
+  points(Depth16_grid, predict(loess_fit_3, d_predict), type = "l", lty = 'dotdash')
+  points(Depth16_grid, predict(loess_fit_4, d_predict), type = "l", lty = 'dotted')
+  legend(x = "topright",
+         lty = c('solid', 'dashed', 'dotdash', 'dotted'),
+         legend = c('default', '0.5', '0.2', '0.1'))
+}
+```
+
+
+Question D
+1) According to the help page the default span is 0.5
+2) When you increase span you are more likely to underfit, as evidenced with the plots that have higher levels of span. Underfitting is when the model does not fit the data very well.
+3) When you have very low span values this leads to overfitting which is where the model fits the data way too closely. If you look at the plots with very low span values you can see this evidently.
+
+Question E
+
+```{r}
+library(mgcv)
+gam_fit <- gam(Sources16 ~ s(Depth16, k = 20), data = d)
+plot(gam_fit)
+summary(gam_fit) # Notice the non-integer edf (equivalent degrees of freedom)
+gam_fit$sp # smoothing parameter (lambda) chosen by generalized cross-validation
+```
+
+1) The span value of .25 most closely resembles the smoothing spline estimated by gam.
+2) The best choice for lambda determined by gam = .000407
+
+Question F
+```{r}
+library(cvTools)
+# This holds the smoothness penalty (lambda) at 0.01 rather than allowing it to be chosen by the function.
+gam_init_fit <- gam(Sources16 ~ s(Depth16, k = 20, sp = 0.01), data = d) 
+## This runs cross-validation by re-using gam_init_fit, which always has sp = 0.01
+cvFit_1 <- cvFit(gam_init_fit, data = d, y = d$Sources16, K = length(Sources16), foldType = "consecutive")
+## cvFit_1 contains various information about the cross-validation
+cvFit_1$cv ## Here is the actual cross-validation score
+```
+
+
+```{r}
+values <- c(0.0001, 0.0005, 0.0008, 0.0009, 0.001, 0.0011, 0.0012, 0.0013, 0.0014, 0.002, 0.003)
+
+empty <- rep(0, length(values))
+
+
+for (v in 1:length(values)){
+
+  gam_init_fit <- gam(Sources16 ~ s(Depth16, k = 20, sp = values[v]), data = d) 
+gam_fit_holder <- cvFit(gam_init_fit, data = d, y = d$Sources16, K = length(Sources16), foldType = "consecutive")
+
+empty[v] <- gam_fit_holder$cv
+
+}
+
+empty
+
+```
+
+
+```{r}
+x_axis <- empty
+y_axis <- values
+
+plot(x_axis, y_axis)
+```
+
+
+
+Question G
+
+1) The lamba of .0011 gives the smallest cv value of 2.6593
+
+2) This is not the same as the game above in the first gam fit which is 3.154
+
+3) There is significant difference between the cv score between the lower fit value and the higher one as demonstrated by the parabolic plot.

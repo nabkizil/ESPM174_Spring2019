@@ -1,0 +1,193 @@
+---
+title: "Problem Set 2"
+author: 3032247297
+date: 2/10/2019
+output: html_notebook
+---
+
+
+#Reading Data into R
+```{r}
+loyn <- read.csv("loyn.csv", header = TRUE)
+#QUestion A
+head(loyn, 5)
+
+```
+
+#Simple data curation
+```{r}
+loyn <- loyn[, c("ABUND", "ALT", "YR.ISOL", "L10AREA", "L10DIST", "L10LDIST", "GRAZE")]
+loyn[["YEARS"]] <- 1983 - loyn[["YR.ISOL"]] ## 1983 reproduces the Box 6.2 result
+```
+
+
+#Multiple Regression
+```{r}
+fit_graze_years <- lm(ABUND ~ (GRAZE + YEARS), data = loyn)
+## Notice how the "data" argument is one way to tell the lm function
+## what data frame has the ABUND, GRAZE and YEARS vector
+
+
+summary(fit_graze_years)
+```
+
+
+##QUestion B
+```{r}
+#1) y = 34.38 - 4.44x - 0.05x
+#2)
+confint(fit_graze_years, "YEARS", level = 0.95)
+#3)
+sum(resid(fit_graze_years)**2)
+#4) The null hypothesis is that there is no association between the years variable and the abundance variable
+#5)The null hypothesis for this variable is that there is no association between any of the variables. In this case that graze and years have an affect on abundance.
+```
+
+#Comparing reduced and full models
+##Question C
+1)
+```{r}
+Full <- lm(ABUND ~  L10AREA + GRAZE + L10DIST + YEARS, data = loyn)
+summary(Full)
+```
+
+```{r}
+reduced <- lm(ABUND ~ L10AREA + GRAZE, data = loyn)
+summary(reduced)
+```
+
+2)
+```{r}
+residred <- sum(resid(reduced)**2)
+residred
+```
+
+3)
+```{r}
+residfull <- sum(resid(Full)**2)
+residfull
+```
+
+4)
+```{r}
+residred - residfull
+```
+
+5)
+```{r}
+(residred - residfull)/2
+```
+
+6)
+```{r}
+F <- anova(Full, reduced)["2", "F"]
+F
+```
+
+7)
+```{r}
+numeratordiff <- reduced$df.residual - Full$df.residual
+numeratordiff
+
+denominatordiff = Full$df.residual
+denominatordiff
+
+```
+
+8)
+When conducting an anova test the F stat tells you if the difference in means between the two populations are statistically significant. Since F != 1, we reject the null
+
+9)
+```{r}
+summary(Full)
+
+4.849e-12
+```
+10)
+We reject the null because our p value is way below our threshold.
+
+11)
+More variables are being used for the full model so the standard error is larger because of that. In addition the error is inversely proportional to the sample size.
+
+12)
+```{r}
+estimate <- -0.6239 * -1
+error <- 0.0431
+sd <- estimate/error
+per <- pt(sd, 48) * 100
+per
+```
+
+13)
+```{r}
+100 - per
+```
+
+14)
+The p value for fit 2 is smaller so we reject the null, and since it is large for fit 4 that means that we fail to reject the null.
+
+#Question D
+```{r}
+simulate_d <- function(L10AREA, GRAZE, true_intercept, L10AREA_true_slope, GRAZE_true_slope, residual_std, n) {
+  ABUND <- numeric(n)
+  for (i in 1:n){
+    ABUND[i] = true_intercept + (L10AREA[i] * L10AREA_true_slope)* (GRAZE[i] * GRAZE_true_slope) + rnorm(1, 0 ,residual_std)
+  }
+  return(data.frame(ABUND, L10AREA, GRAZE))
+}
+```
+
+
+#Question E
+```{r}
+num_simulations <- 1000
+GRAZE_p_values <- numeric(num_simulations)
+GRAZE_slopes <- numeric(num_simulations)
+set.seed(12345)
+for(i in 1:num_simulations) {
+  sim_data <- simulate_d(loyn[["L10AREA"]], loyn[["GRAZE"]], 22, 6.5, -1.0, 6.0, 56)
+  fit <- lm(ABUND ~ L10AREA + GRAZE, data = sim_data)
+  GRAZE_p_values[i] <- summary(fit)$coefficients['GRAZE', 'Pr(>|t|)']
+  GRAZE_slopes[i] <- summary(fit)$coefficients['GRAZE', 'Estimate']
+}
+# Now you can look at the distribution of p-values and estimated slopes:
+hist(GRAZE_p_values, main = "P-values for GRAZE")
+hist(GRAZE_slopes, main = "Estimated coefficients for GRAZE")
+# Finally, you can look at the statistical power: the probability of rejecting the null 
+# when it is FALSE. From simulations, this is approximately the frequency of rejecting 
+# the null.  We can calculate that as follows:
+sum(GRAZE_p_values < 0.05) / num_simulations
+# or, equivalently:
+mean(GRAZE_p_values < 0.05)
+```
+
+1)
+Just by looking at the graphs it seems like the estimated slope is not close to the true slope for graze
+
+2)
+The distribution would decrease since the estimated coefficients are closer to -2 than -1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,122 @@
+---
+title: "ESPM_174_Problem_Set1"
+author: '3032247297'
+date: "January 28, 2019"
+output: html_document
+---
+
+##Question A
+```{r}
+a <- FALSE
+print(a)
+```
+
+##Question B
+```{r}
+example <- c(3.4, 1.2, 5.6, 4.5)
+example[4]
+example[2]
+```
+
+##Question C
+```{r}
+set.seed(12345)
+rnorm(10, 100, 50)
+```
+
+##Question D
+```{r}
+set.seed(12345)
+rnorm(5, 1000, sd = c(10,200,3000,10,200))
+```
+
+##Question E
+```{r}
+set.seed(12345)
+a <- rnorm(100, 10, 20)
+
+b <- a > 30
+
+sum(b)
+```
+
+##Question F
+```{r}
+set.seed(12345)
+sum(c(rnorm(100,10,20) > 30))
+```
+##Question G
+```{r}
+w <- vector()
+for (number in 1:length(c(31:60))) {
+  
+  w[number] <- c(31:60)[number]
+  
+}
+
+w
+```
+
+
+##Question H
+```{r}
+adder <- function(a, b){
+  
+  return((a+2)*b)
+}
+
+adder(2:6, 10)
+```
+
+##Question I
+```{r}
+length <- c(5.4, 3.7, 2.8, 7.4)
+mass <- c(80, 100, 90, 120)
+
+frame <- data.frame(length, mass)
+frame[2]
+frame[3, "length"]
+frame[4,]
+```
+
+##Question J
+```{r}
+rep(rep(c(6,7,8),10)[1:20], 5)
+
+d <- seq.int(5, 100,by = 0.2)[1:15]
+
+rep(d, each = 4)
+```
+
+##Question K
+```{r}
+x <- seq(0.05, 1, 0.05)
+response <- numeric()
+intercept <- 1.2
+slope <- 0.3
+residual_stdv <- 0.1
+
+set.seed(12345)
+for(i in 1:length(x)){
+  response[i] <- intercept + slope*x[i] + rnorm(1, 0, 0.1)
+}
+
+our_data <- data.frame(x, y = response)
+
+plot(our_data)
+
+```
+
+##Question L
+```{r}
+colors <- rep(c('red', 'green', 'blue'), each = 2)
+fcolors <- factor(colors)
+fcolors
+```
+
+##Question M
+```{r}
+set.seed(12345)
+list(mySequence = seq(1:10), random = rnorm(20,0,1))
+```
+

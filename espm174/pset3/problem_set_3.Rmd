@@ -1,0 +1,260 @@
+---
+title: "Problem Set 3"
+author: 3032247297
+date: 2/10/2019
+output: html_notebook
+---
+
+#Strategies for simulating one way anova
+
+```{r}
+simulate_anova <- function(group_means, # Step 1
+                           group_names,
+                           res_sd, 
+                           n_per_group) { 
+  p <- length(group_means) # p is the number of groups
+  # Step 2:
+  y <- numeric(p * n_per_group)
+  groups <- character(p * n_per_group)
+  # When we do numeric(p * n_per_group), we are creating a numeric vector 
+  # of length "p * n_per_group".  It will initially be all zeros.  Try it
+  # in your console if you'd like to explore.  It would also work to do:
+  # y <- numeric(0), or
+  # y <- 0
+  # but y <- numeric(p * n_per_group) will be slightly more efficient and also
+  # conveys to the code-reader something about the plan for y.
+  # The same comments could be made about character(p * n_per_group).
+  #
+  row <- 1 # Prepare for step 5
+  # Step 3:
+  for(i in 1:p) {
+    # Step 4:
+    for(j in 1:n_per_group) {
+      # Step 6:
+      groups[row] <- group_names[i]
+      y[row] <- rnorm(1, mean = group_means[i], sd = res_sd)
+      ## Increment for step 5:
+      row <- row + 1
+    }
+  }
+  # Step 7:
+  data.frame(y = y, groups = factor(groups))
+}
+```
+
+Trying the function
+```{r}
+set.seed(987)
+# It is convenient to use similar names here
+# as we use in the simulate_anova function, but we
+# could use any names we want.
+our_group_means <- c(100, 150, 125)
+our_group_names <- c("Apples", "Oranges", "Bananas")
+our_res_sd <- 20
+our_n_per_group <- 4
+one_data_set <- simulate_anova(group_means = our_group_means,
+                               group_names = our_group_names,
+                               res_sd = our_res_sd,
+                               n_per_group = our_n_per_group)
+# Look at the result
+one_data_set
+```
+
+
+#Understanding contrasts
+
+Question A)
+The estimate for the group means for the 4 groups in this example are below. The contrasts in this case are done based on the groups.
+```{r}
+int <- rep(5.640877, 5)
+g1 <- rep(-14.167929, 5)
+g2 <- rep(9.960847, 5)
+g3 <- rep(18.647093, 5)
+
+A <- mean(int + g1)
+B <- mean(int + g2)
+C <- mean(int + g3)
+D <- mean(int - (g1 + g2 + g3))
+
+together <- c(A, B, C, D)
+
+together
+```
+
+
+
+Question B)
+The estimated group means for the 4 groups in this example are below. The parameterization was once again done on the groups but in this case it was the treatment contrasts.
+
+```{r}
+int <- rep(52.95507, 4)
+g2 <- rep(-14.65655, 4)
+g3 <- rep(66.57709, 4)
+g4 <- rep(-26.83282, 4)
+
+A <- mean(int)
+B <- mean(int + g2)
+C <- mean(int + g3)
+D <- mean(int + g4)
+
+all <- c(A, B, C, D)
+```
+
+
+#Simulating using treatment contrasts
+Question C)
+```{r}
+simulate_anova_trt_contrast <- function(parameters, # Step 1
+                           group_names,
+                           res_sd, 
+                           n_per_group) { 
+  p <- length(group_names) # p is the number of groups
+  # Step 2:
+  y <- numeric(p * n_per_group)
+  groups <- character(p * n_per_group)
+  # When we do numeric(p * n_per_group), we are creating a numeric vector 
+  # of length "p * n_per_group".  It will initially be all zeros.  Try it
+  # in your console if you'd like to explore.  It would also work to do:
+  # y <- numeric(0), or
+  # y <- 0
+  # but y <- numeric(p * n_per_group) will be slightly more efficient and also
+  # conveys to the code-reader something about the plan for y.
+  # The same comments could be made about character(p * n_per_group).
+  #
+  row <- 1 # Prepare for step 5
+  # Step 3:
+  for(i in 1:p) {
+    # Step 4:
+    for(j in 1:n_per_group) {
+      
+      if (i ==1){
+        mu <- rnorm(1, mean = parameters[i], sd = res_sd)
+        y[row] <- mu
+      # Step 6:
+      groups[row] <- group_names[i]}
+      else {
+      y[row] <- rnorm(1, mean = parameters[1], sd = res_sd)
+      groups[row] <- group_names[i]
+      }
+      ## Increment for step 5:
+      row <- row + 1
+    }
+  }
+  # Step 7:
+  data.frame(y = y, groups = factor(groups))
+}
+```
+
+
+<!--Demonstrating that it works-->
+```{r}
+set.seed(123)
+sim_data <- simulate_anova_trt_contrast(parameters = c(10, 1, 2),
+                                       group_names = c("Cal", "Stanford", "UCLA"),
+                                       res_sd = 0.5,
+                                       n_per_group = 3)
+# Look at the data
+sim_data
+# For below, here is how to do ANOVA
+anova(lm(y ~ groups, data = sim_data))
+# For below, here is how to get the F statistic
+anova(lm(y ~ groups, data = sim_data))$F[1]
+```
+
+
+Question D)
+```{r}
+simulate_many_F <- function(n_simulation, 
+                            group_means,
+                            group_names,
+                            n_per_group) {
+  x = c()
+  
+  for (i in 1:n_simulation) {
+    sim = simulate_anova(group_means,
+                         group_names,
+                         res_sd,
+                         n_per_group)
+    
+    x[i] = anova(ln(y- groups, data = sim))$F[1]
+    
+  }
+  
+  x
+  }
+```
+yes it matches
+
+
+
+Question E)
+
+```{r}
+simulate_many_p <- function(n_simulation,group_means,group_names,
+n_per_group) {
+  p = c() #instantiating empty vector
+  
+  for (i in 1:n_simulation) {
+    sim = simulate_anova(group_means,group_names,res_sd,n_per_group)
+    
+    p[i] = anova(ln(y- groups, data = sim))[["Pr(>F)"]][1]
+    
+  }
+   p
+  }
+
+
+```
+
+
+Question F)
+```{r}
+
+
+output_group1 <- simulate_many_p(1000, 
+                group_means,
+                group_names,
+                20)  
+                          
+output_1 <- mean(output_group1 < .05)
+
+
+output_group2 <- simulate_many_p(1000, 
+                                group_means,
+                                group_names,
+                                21) 
+                                
+output_2 <- mean(output_group2 < .05)    
+
+
+output_group3 <- simulate_many_p(1000, 
+                                group_means,
+                                group_names,
+                                22)
+                                
+output_3 <- mean(output_group3 < .05)
+
+#increment by 1
+
+
+```
+
+
+Question G)
+The values should increase as you move from left to right because the pvalue increases due to alpha. The threshold value is 0.05 because that is where we reject the null.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
